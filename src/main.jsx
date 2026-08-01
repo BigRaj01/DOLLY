@@ -11,12 +11,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       autoConnect
       dappConfig={{
         network: Network.TESTNET,
-        // Rate-limit key for Aptos fullnode calls. This is designed by Aptos
-        // Labs to be used client-side (it's a rate-limit key, not a secret
-        // credential) — set as VITE_APTOS_API_KEY in Vercel's environment
-        // variables, and Vite bakes it into the build at deploy time.
         aptosApiKey: import.meta.env.VITE_APTOS_API_KEY,
       }}
+      optInWallets={["Petra"]}
       onError={(error) => {
         console.error('Wallet adapter error:', error);
       }}

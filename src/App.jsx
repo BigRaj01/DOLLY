@@ -58,19 +58,24 @@ const FEATURES = [
 ];
 
 export default function App() {
-  const { connect, disconnect, connected, account, wallet, wallets } = useWallet();
+  const { connect, disconnect, connected, account, wallets } = useWallet();
   const { msg, show } = useToast();
   const [logLines, setLogLines] = useState([]);
-  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   const addr = account?.address?.toString?.() ?? '';
+  const petra = wallets?.find((w) => w.name === 'Petra');
+  const petraInstalled = petra?.readyState === 'Installed';
 
-  async function handleConnect(name) {
+  async function handleConnectClick() {
+    if (!petraInstalled) {
+      show('Petra not found — opening install page');
+      window.open(petra?.url || 'https://petra.app/', '_blank');
+      return;
+    }
     try {
-      await connect(name);
+      await connect('Petra');
       show('Wallet connected · Prime Vault unlocked');
-      setWalletMenuOpen(false);
     } catch (e) {
       show('Connection cancelled or failed');
     }
@@ -117,33 +122,15 @@ export default function App() {
         <div className="wallet-area">
           {connected ? (
             <>
-              <button className="wallet-btn connected" onClick={() => setWalletMenuOpen((v) => !v)}>
-                {shorten(addr)}
-              </button>
+              <button className="wallet-btn connected">{shorten(addr)}</button>
               <button className="wallet-btn ghost" onClick={handleDisconnect}>
                 Disconnect
               </button>
             </>
           ) : (
-            <div className="wallet-picker">
-              <button className="wallet-btn" onClick={() => setWalletMenuOpen((v) => !v)}>
-                Connect Wallet
-              </button>
-              {walletMenuOpen && (
-                <div className="wallet-dropdown">
-                  {wallets && wallets.length > 0 ? (
-                    wallets.map((w) => (
-                      <button key={w.name} className="wallet-option" onClick={() => handleConnect(w.name)}>
-                        {w.icon && <img src={w.icon} alt="" width="18" height="18" />}
-                        {w.name}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="wallet-empty">No wallets detected</div>
-                  )}
-                </div>
-              )}
-            </div>
+            <button className="wallet-btn" onClick={handleConnectClick}>
+              Connect Wallet
+            </button>
           )}
         </div>
       </header>
@@ -169,7 +156,7 @@ export default function App() {
           <div className="hero-cta">
             <button
               className="btn-primary"
-              onClick={() => (connected ? null : setWalletMenuOpen(true))}
+              onClick={() => (connected ? null : handleConnectClick())}
             >
               {connected ? 'Wallet Connected ✓' : 'Connect Wallet to Start'}
             </button>
