@@ -86,6 +86,11 @@ export default function App() {
   }
 
   function onFileChosen(e) {
+    if (!connected) {
+      e.target.value = '';
+      show('Connect your wallet first to upload');
+      return;
+    }
     const file = e.target.files[0];
     if (!file) return;
     setLogLines([]);
@@ -219,16 +224,25 @@ export default function App() {
           <div className="eyebrow">Try It</div>
           <h2 className="section-title">Upload a document</h2>
           <p className="section-sub">
-            This is a local preview of the DOLLY upload flow. Connect a wallet above to simulate a
-            real clone commitment.
+            {connected
+              ? "This is a local preview of the DOLLY upload flow, simulating a real clone commitment."
+              : 'Connect your Petra wallet above to unlock uploads.'}
           </p>
           <div className="vault">
-            <label className="vault-drop">
-              <input type="file" ref={fileInputRef} onChange={onFileChosen} accept=".pdf,.docx,.doc,.mp3,.txt,.png,.jpg" />
+            <label
+              className={`vault-drop${connected ? '' : ' locked'}`}
+              onClick={(e) => {
+                if (!connected) {
+                  e.preventDefault();
+                  show('Connect your wallet first to upload');
+                }
+              }}
+            >
+              <input type="file" ref={fileInputRef} onChange={onFileChosen} accept=".pdf,.docx,.doc,.mp3,.txt,.png,.jpg" disabled={!connected} />
               <svg className="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                 <path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
               </svg>
-              <div className="drop-text">Tap to choose a file</div>
+              <div className="drop-text">{connected ? 'Tap to choose a file' : 'Wallet required to upload'}</div>
               <div className="drop-sub">PDF · DOCX · MP3 · TXT · IMG — max 25MB (demo)</div>
             </label>
             <div className="vault-log">
