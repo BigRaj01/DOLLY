@@ -1,0 +1,6 @@
+# never commit secrets (local-fallback config only — api/config.js is fine, it has no key in it)
+/config.js
+
+# common
+.DS_Store
+node_modules/
