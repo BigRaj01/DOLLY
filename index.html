@@ -243,6 +243,40 @@
     html{scroll-behavior:auto;}
     .log-line{animation:none; opacity:1;}
   }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
+    align-items:flex-end; justify-content:center;
+  }
+  @media(min-width:640px){ .modal-overlay{align-items:center;} }
+  .modal-box{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:16px 16px 0 0; padding:22px 20px 28px;
+    max-width:440px; width:100%; max-height:80vh; overflow-y:auto;
+  }
+  @media(min-width:640px){ .modal-box{border-radius:16px;} }
+  .modal-head{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'Fraunces', serif; font-weight:600; font-size:1.15rem;
+    margin-bottom:12px;
+  }
+  .modal-close{
+    background:none; border:none; color:var(--text-dim); font-size:1.4rem;
+    cursor:pointer; line-height:1; padding:4px;
+  }
+  .modal-text{color:var(--text-dim); font-size:.88rem; line-height:1.55; margin-bottom:18px;}
+  .modal-step{margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid var(--line);}
+  .modal-step:last-child{border-bottom:none; margin-bottom:0; padding-bottom:0;}
+  .modal-step b{display:block; font-size:.92rem; margin-bottom:6px;}
+  .modal-step p{color:var(--text-dim); font-size:.85rem; line-height:1.5; margin-bottom:10px;}
+  .url-row{display:flex; gap:8px; align-items:center;}
+  .url-box{
+    flex:1; background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:9px 10px; font-size:.72rem; color:var(--teal); overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap;
+  }
+  .modal-link{display:inline-block; margin-right:8px; margin-top:4px; text-decoration:none; padding:10px 16px; font-size:.8rem;}
 </style>
 </head>
 <body>
@@ -437,6 +471,29 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="mobileWalletModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span>Connect on mobile</span>
+      <button class="modal-close" id="closeMobileModal">&times;</button>
+    </div>
+    <p class="modal-text">Petra doesn't inject into regular mobile browsers — but its app has its own built-in browser that works just like the desktop extension. Two ways to get there:</p>
+    <div class="modal-step">
+      <b>1. Already have Petra installed</b>
+      <p>Open the Petra app → tap the <span class="mono">Browser</span> tab → paste this page's link:</p>
+      <div class="url-row">
+        <span class="mono url-box" id="currentPageUrl"></span>
+        <button class="copy-btn" id="copyPageUrl">Copy</button>
+      </div>
+    </div>
+    <div class="modal-step">
+      <b>2. Don't have it yet</b>
+      <p>Install Petra, then follow step 1.</p>
+      <a href="https://petra.app/" target="_blank" class="btn-ghost modal-link">Get Petra (petra.app)</a>
+    </div>
+  </div>
+</div>
+
 <script>
 (async function(){
   // Shelby / Aptos config: fetched from the serverless /api/config endpoint
@@ -479,16 +536,19 @@
   // reusing a permission you granted on an earlier visit, not this code.
   async function connectWallet(){
     if(connected) return;
-    try{
-      if(window.aptos){
-        // onlyIfTrusted:false forces the approval popup every time,
-        // instead of letting the extension silently reconnect.
-        const res = await window.aptos.connect({ onlyIfTrusted: false });
-        walletAddr = res.address;
+    if(!window.aptos){
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if(isMobile){
+        showMobileWalletHelp();
       } else {
-        walletAddr = '0x' + Array.from({length:8},()=>Math.floor(Math.random()*16).toString(16)).join('') + '…mock';
-        showToast('No wallet extension found — using demo mode');
+        showToast('No Aptos wallet found — opening Petra install page');
+        window.open('https://petra.app/', '_blank');
       }
+      return;
+    }
+    try{
+      const res = await window.aptos.connect({ onlyIfTrusted: false });
+      walletAddr = res.address;
     } catch(e){
       showToast('Connection cancelled');
       return;
@@ -501,6 +561,24 @@
     heroConnect.textContent = 'Wallet Connected ✓';
     showToast('Wallet connected · Prime Vault unlocked');
   }
+
+  // Petra (and most Aptos wallets) don't inject window.aptos into a plain
+  // mobile browser — there's no extension to inject it. But their mobile
+  // apps have a built-in dApp browser that DOES inject it. So on mobile,
+  // instead of guessing at a wallet's deep-link protocol, we guide the
+  // person to open this same page inside that in-app browser.
+  function showMobileWalletHelp(){
+    const modal = document.getElementById('mobileWalletModal');
+    document.getElementById('currentPageUrl').textContent = window.location.href;
+    modal.style.display = 'flex';
+  }
+  function closeMobileWalletHelp(){
+    document.getElementById('mobileWalletModal').style.display = 'none';
+  }
+  document.getElementById('closeMobileModal').addEventListener('click', closeMobileWalletHelp);
+  document.getElementById('copyPageUrl').addEventListener('click', ()=>{
+    navigator.clipboard.writeText(window.location.href).then(()=> showToast('Link copied — paste it in Petra\'s browser tab'));
+  });
 
   async function disconnectWallet(){
     try{ if(window.aptos && window.aptos.disconnect) await window.aptos.disconnect(); } catch(e){}
