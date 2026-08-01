@@ -69,8 +69,7 @@ export default function App() {
 
   async function handleConnectClick() {
     if (!petraInstalled) {
-      show('Petra not found — opening install page');
-      window.open(petra?.url || 'https://petra.app/', '_blank');
+      show('Please install Petra Wallet to continue');
       return;
     }
     try {
